@@ -1,4 +1,4 @@
-name: Build UNNIE APK Direct
+name: Build UNNIE Beta 0.2 APK
 
 on:
   push:
@@ -14,12 +14,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract Android source
+      - name: Restore UNNIE Beta 0.2 Android source
+        shell: bash
         run: |
+          cat unnie-beta-v02.part1 unnie-beta-v02.part2 unnie-beta-v02.part3 unnie-beta-v02.part4 | base64 -d > /tmp/unnie-beta-v02-source.tar.gz
+          echo "66b5bb2dfbc2e05d28a6186555d50af991dfe5b0a1fafa682d84283bb31180ad  /tmp/unnie-beta-v02-source.tar.gz" | sha256sum -c -
           mkdir -p /tmp/unnie-beta
-          tar -xzf unnie-beta-source.tar.gz -C /tmp/unnie-beta
+          tar -xzf /tmp/unnie-beta-v02-source.tar.gz -C /tmp/unnie-beta
           test -f /tmp/unnie-beta/settings.gradle
           test -f /tmp/unnie-beta/app/src/main/assets/index.html
+          test -f /tmp/unnie-beta/app/src/main/java/com/unnie/notes/beta/MainActivity.java
+          grep -q "UNNIE Beta 0.2" /tmp/unnie-beta/app/src/main/assets/index.html
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -43,17 +48,19 @@ jobs:
         run: gradle --no-daemon assembleDebug --stacktrace
 
       - name: Prepare named APK
-        run: cp /tmp/unnie-beta/app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/UNNIE-Beta-0.1.apk"
+        run: cp /tmp/unnie-beta/app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/UNNIE-Beta-0.2.apk"
 
       - name: Verify APK
         run: |
-          test -s UNNIE-Beta-0.1.apk
-          unzip -l UNNIE-Beta-0.1.apk | grep -E 'AndroidManifest.xml|classes.dex'
+          test -s UNNIE-Beta-0.2.apk
+          unzip -l UNNIE-Beta-0.2.apk | grep -E 'AndroidManifest.xml|classes.dex|assets/index.html'
+          unzip -p UNNIE-Beta-0.2.apk assets/index.html | grep -q "UNNIE Beta 0.2"
+          sha256sum UNNIE-Beta-0.2.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: UNNIE-Beta-0.1-APK
-          path: UNNIE-Beta-0.1.apk
+          name: UNNIE-Beta-0.2-APK
+          path: UNNIE-Beta-0.2.apk
           if-no-files-found: error
           retention-days: 14
