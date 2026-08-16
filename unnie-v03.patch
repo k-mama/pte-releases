@@ -1,0 +1,269 @@
+diff -ruN a/app/build.gradle b/app/build.gradle
+--- a/app/build.gradle	2026-08-16 22:36:14.000000000 +0000
++++ b/app/build.gradle	2026-08-16 23:27:46.360186838 +0000
+@@ -10,8 +10,8 @@
+         applicationId 'com.unnie.notes.beta'
+         minSdk 24
+         targetSdk 35
+-        versionCode 2
+-        versionName '0.2'
++        versionCode 3
++        versionName '0.3'
+     }
+ 
+     signingConfigs {
+@@ -34,3 +34,8 @@
+         targetCompatibility JavaVersion.VERSION_17
+     }
+ }
++
++
++dependencies {
++    implementation 'androidx.core:core:1.13.1'
++}
+diff -ruN a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+--- a/app/src/main/AndroidManifest.xml	2026-08-16 22:36:14.000000000 +0000
++++ b/app/src/main/AndroidManifest.xml	2026-08-16 23:27:46.880969210 +0000
+@@ -9,6 +9,16 @@
+         android:supportsRtl="true"
+         android:theme="@style/AppTheme"
+         android:usesCleartextTraffic="false">
++
++        <provider
++            android:name="androidx.core.content.FileProvider"
++            android:authorities="${applicationId}.fileprovider"
++            android:exported="false"
++            android:grantUriPermissions="true">
++            <meta-data
++                android:name="android.support.FILE_PROVIDER_PATHS"
++                android:resource="@xml/file_paths" />
++        </provider>
+         <activity
+             android:name=".MainActivity"
+             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|uiMode"
+diff -ruN a/app/src/main/assets/index.html b/app/src/main/assets/index.html
+--- a/app/src/main/assets/index.html	2026-08-16 22:41:35.000000000 +0000
++++ b/app/src/main/assets/index.html	2026-08-16 23:28:20.670957598 +0000
+@@ -3,7 +3,7 @@
+ <head>
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+-<title>UNNIE Beta 0.2</title>
++<title>UNNIE Beta 0.3</title>
+ <style>
+ 
+ :root{
+@@ -39,6 +39,7 @@
+ button{border:0;background:none;padding:0;-webkit-tap-highlight-color:transparent}
+ button:active{opacity:.58}
+ .hidden{display:none!important}
++.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+ .app{min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+ .shell{width:calc(100% - (var(--side) * 2));max-width:720px;margin:0 auto}
+ 
+@@ -83,7 +84,8 @@
+ .bottom-tools{position:fixed;z-index:18;left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr 1fr;min-height:64px;padding-bottom:env(safe-area-inset-bottom);border-top:1px solid rgba(22,52,93,.085);background:rgba(252,253,255,.86);backdrop-filter:blur(18px) saturate(110%)}
+ .tool{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--navy);font-size:14.5px;font-weight:520}
+ .tool+.tool{border-left:1px solid rgba(22,52,93,.07)}
+-.tool svg{width:22px;height:22px;stroke:var(--blue);stroke-width:1.55;fill:none;stroke-linecap:round;stroke-linejoin:round}
++.tool svg{width:23px;height:23px;stroke:var(--blue);stroke-width:1.65;fill:none;stroke-linecap:round;stroke-linejoin:round}
++.tool.icon-only svg{width:26px;height:26px}
+ 
+ /* Sheets */
+ .overlay{position:fixed;z-index:100;inset:0;display:flex;align-items:flex-end;background:rgba(18,38,68,.18);backdrop-filter:blur(8px)}
+@@ -174,7 +176,7 @@
+       state.examplesSeeded = true;
+       state.notes = [
+         noteFromText('안녕하세요.\nUNNIE에 오신 것을 환영해요. 생각나는 대로 편하게 적어보세요. 길게 써도 되고 한 줄만 적어도 괜찮아요.', isoToday()),
+-        noteFromText('예시글\n오늘 아침 문득 생각난 것을 적어봅니다. 사진을 넣고 싶을 때는 글을 쓰다가 사진을 누르면 됩니다.', yesterday())
++        noteFromText('예시글\n오늘 아침 문득 생각난 것을 적어봅니다. 사진을 넣고 싶을 때는 아래 카메라 아이콘을 누르면 됩니다.', yesterday())
+       ];
+       persist();
+     }
+@@ -279,8 +281,8 @@
+         <div id="blocks" class="blocks">${n.blocks.map(blockHtml).join('')}</div>
+       </section>
+       <nav class="bottom-tools">
+-        <button class="tool" data-act="photo"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg><span>사진</span></button>
+-        <button class="tool" data-act="export"><svg viewBox="0 0 24 24"><path d="M12 4v11M8 11l4 4 4-4M5 19h14"></path></svg><span>내보내기</span></button>
++        <button class="tool icon-only" data-act="photo" aria-label="사진 추가"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.3 6.5 9.8 4.5h4.4l1.5 2H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2.3Z"></path><circle cx="12" cy="13" r="3.4"></circle></svg><span class="sr-only">사진 추가</span></button>
++        <button class="tool" data-act="share"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.2"></circle><circle cx="6" cy="12" r="2.2"></circle><circle cx="18" cy="19" r="2.2"></circle><path d="m8 10.9 7.8-4.6M8 13.1l7.8 4.6"></path></svg><span>공유</span></button>
+       </nav>
+     </main>`;
+     bindCommon();
+@@ -311,7 +313,7 @@
+     app.querySelector('[data-act="save"]')?.addEventListener('click',()=>{const n=current();if(n){n.updatedAt=new Date().toISOString();persist();setStatus('저장됨');showToast('저장했어요.')}});
+     app.querySelector('[data-act="menu"]')?.addEventListener('click',()=>{sheet='menu';renderSheet()});
+     app.querySelector('[data-act="photo"]')?.addEventListener('click',()=>{sheet='photo';renderSheet()});
+-    app.querySelector('[data-act="export"]')?.addEventListener('click',()=>{sheet='export';renderSheet()});
++    app.querySelector('[data-act="share"]')?.addEventListener('click',()=>{sheet='share';renderSheet()});
+     app.querySelectorAll('[data-remove-image]').forEach(x=>x.addEventListener('click',()=>{const n=current();n.blocks=n.blocks.filter(b=>b.id!==x.dataset.removeImage);ensureTrailingText(n);schedulePersist();renderEditor()}));
+   }
+ 
+@@ -322,7 +324,7 @@
+     if(sheet==='photo') ov.innerHTML=`<section class="sheet"><header class="sheet-head"><strong class="sheet-title">사진 추가</strong><button class="close" data-close>${closeIcon}</button></header><p class="label">비율</p><div class="ratios">${['3:4','1:1','9:16'].map(r=>`<button class="ratio ${chosenRatio===r?'active':''}" data-ratio="${r}">${r}</button>`).join('')}</div><p class="label">가져오기</p><button class="source" data-camera><span>카메라</span><span class="row-arrow">＋</span></button><button class="source" data-gallery><span>갤러리에서 선택</span><span class="row-arrow">＋</span></button></section>`;
+     else if(sheet==='font') ov.innerHTML=`<section class="sheet"><header class="sheet-head"><strong class="sheet-title">글씨 크기</strong><button class="close" data-close>${closeIcon}</button></header>${[['normal','보통'],['large','크게'],['xlarge','아주 크게']].map(([v,l])=>`<button class="font-option ${state.settings.fontSize===v?'active':''}" data-font="${v}"><span>${l}</span><span style="font-family:Roboto,sans-serif;font-size:${v==='normal'?18:v==='large'?23:29}px;font-weight:300">Aa</span></button>`).join('')}</section>`;
+     else if(sheet==='menu') ov.innerHTML=`<section class="sheet"><header class="sheet-head"><strong class="sheet-title">기록</strong><button class="close" data-close>${closeIcon}</button></header><button class="menu-option danger" data-delete-note><span>기록 삭제</span><span class="row-arrow">—</span></button></section>`;
+-    else ov.innerHTML=`<section class="sheet"><header class="sheet-head"><strong class="sheet-title">내보내기</strong><button class="close" data-close>${closeIcon}</button></header><button class="export-option" data-export="jpg"><span>Instagram 4:5 이미지</span><span class="row-arrow">↓</span></button><button class="export-option" data-export="txt"><span>TXT 파일</span><span class="row-arrow">↓</span></button></section>`;
++    else ov.innerHTML=`<section class="sheet"><header class="sheet-head"><strong class="sheet-title">공유</strong><button class="close" data-close>${closeIcon}</button></header><button class="export-option" data-share="jpg"><span>이미지로 공유</span><span class="row-arrow">↗</span></button><button class="export-option" data-share="txt"><span>텍스트로 공유</span><span class="row-arrow">↗</span></button></section>`;
+     ov.addEventListener('click',e=>{if(e.target===ov){closeSheet()}});
+     ov.querySelector('[data-close]')?.addEventListener('click',closeSheet);
+     ov.querySelectorAll('[data-ratio]').forEach(x=>x.addEventListener('click',()=>{chosenRatio=x.dataset.ratio;renderSheet()}));
+@@ -330,8 +332,8 @@
+     ov.querySelector('[data-gallery]')?.addEventListener('click',()=>{Native?.pickGallery?.()});
+     ov.querySelectorAll('[data-font]').forEach(x=>x.addEventListener('click',()=>{state.settings.fontSize=x.dataset.font;applyFontSize();persist();closeSheet();if(view==='editor')renderEditor();else renderFeed()}}));
+     ov.querySelector('[data-delete-note]')?.addEventListener('click',()=>{if(confirm('이 기록을 삭제할까요?')){state.notes=state.notes.filter(x=>x.id!==currentId);persist();currentId=null;sheet=null;view='feed';document.getElementById('overlay')?.remove();renderFeed()}});
+-    ov.querySelector('[data-export="txt"]')?.addEventListener('click',exportTxt);
+-    ov.querySelector('[data-export="jpg"]')?.addEventListener('click',exportJpg);
++    ov.querySelector('[data-share="txt"]')?.addEventListener('click',shareTxt);
++    ov.querySelector('[data-share="jpg"]')?.addEventListener('click',shareJpg);
+     document.body.appendChild(ov);
+   }
+   function closeSheet(){sheet=null;document.getElementById('overlay')?.remove()}
+@@ -369,7 +371,7 @@
+   }
+ 
+   function plainText(n){return n.blocks.filter(b=>b.type==='text').map(b=>b.text).join('\n\n').trim()}
+-  function exportTxt(){const n=current();if(!n)return;Native?.saveText?.(`unnie-${n.date}.txt`,plainText(n));closeSheet()}
++  function shareTxt(){const n=current();if(!n)return;const text=plainText(n)||'UNNIE';closeSheet();if(Native?.shareText)Native.shareText(text);else if(navigator.share)navigator.share({text}).catch(()=>{});}
+ 
+   function wrapLines(ctx,text,maxWidth){
+     const lines=[];
+@@ -427,7 +429,7 @@
+     return out;
+   }
+ 
+-  async function exportJpg(){
++  async function shareJpg(){
+     const n=current();if(!n)return;
+     closeSheet();
+     const pages=[];let page=newExportPage(n);pages.push(page);
+@@ -458,12 +460,14 @@
+       }
+       page.y+=isTitle?26:20;
+     }
+-    pages.forEach((p,i)=>{
++    const dataUrls=pages.map((p,i)=>{
+       p.ctx.strokeStyle='rgba(22,52,93,.10)';p.ctx.lineWidth=1;p.ctx.beginPath();p.ctx.moveTo(82,1286);p.ctx.lineTo(998,1286);p.ctx.stroke();
+       p.ctx.fillStyle='#9aa5b4';p.ctx.font='400 18px sans-serif';p.ctx.fillText(String(i+1).padStart(2,'0')+' / '+String(pages.length).padStart(2,'0'),82,1320);
+-      Native?.saveImage?.(`unnie-${n.date}-${String(i+1).padStart(2,'0')}.jpg`,p.canvas.toDataURL('image/jpeg',.92));
++      return p.canvas.toDataURL('image/jpeg',.92);
+     });
+-    Native?.notify?.(`이미지 ${pages.length}장을 저장했어요.`);
++    if(Native?.shareImages) Native.shareImages(`unnie-${n.date}`,JSON.stringify(dataUrls));
++    else if(Native?.saveImage){dataUrls.forEach((dataUrl,i)=>Native.saveImage(`unnie-${n.date}-${String(i+1).padStart(2,'0')}.jpg`,dataUrl));Native?.notify?.(`이미지 ${pages.length}장을 저장했어요.`);}
++    else showToast('이 기기에서는 이미지 공유를 사용할 수 없어요.');
+   }
+ 
+   window.UNNIE={
+diff -ruN a/app/src/main/java/com/unnie/notes/beta/MainActivity.java b/app/src/main/java/com/unnie/notes/beta/MainActivity.java
+--- a/app/src/main/java/com/unnie/notes/beta/MainActivity.java	2026-08-16 22:36:36.000000000 +0000
++++ b/app/src/main/java/com/unnie/notes/beta/MainActivity.java	2026-08-16 23:27:45.801383793 +0000
+@@ -21,11 +21,14 @@
+ import android.webkit.WebViewClient;
+ import android.widget.Toast;
+ 
++import androidx.core.content.FileProvider;
++
+ import java.io.ByteArrayOutputStream;
+ import java.io.File;
+ import java.io.FileOutputStream;
+ import java.io.InputStream;
+ import java.io.OutputStream;
++import java.util.ArrayList;
+ import java.nio.charset.StandardCharsets;
+ import java.text.SimpleDateFormat;
+ import java.util.Date;
+@@ -111,6 +114,16 @@
+         }
+ 
+         @JavascriptInterface
++        public void shareText(String text) {
++            runOnUiThread(() -> shareTextContent(text));
++        }
++
++        @JavascriptInterface
++        public void shareImages(String filenamePrefix, String dataUrlsJson) {
++            runOnUiThread(() -> shareImageContent(filenamePrefix, dataUrlsJson));
++        }
++
++        @JavascriptInterface
+         public void notify(String message) {
+             runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
+         }
+@@ -187,6 +200,67 @@
+         }
+     }
+ 
++    private void shareTextContent(String text) {
++        try {
++            Intent intent = new Intent(Intent.ACTION_SEND);
++            intent.setType("text/plain");
++            intent.putExtra(Intent.EXTRA_TEXT, text == null ? "" : text);
++            startActivity(Intent.createChooser(intent, "공유"));
++        } catch (Exception e) {
++            Toast.makeText(this, "공유할 앱을 열지 못했어요.", Toast.LENGTH_SHORT).show();
++        }
++    }
++
++    private void shareImageContent(String filenamePrefix, String dataUrlsJson) {
++        try {
++            org.json.JSONArray array = new org.json.JSONArray(dataUrlsJson);
++            if (array.length() == 0) throw new IllegalArgumentException("No images");
++
++            File sharedDir = new File(getCacheDir(), "shared");
++            if (!sharedDir.exists() && !sharedDir.mkdirs()) {
++                throw new IllegalStateException("Could not create share cache");
++            }
++
++            File[] oldFiles = sharedDir.listFiles();
++            if (oldFiles != null) {
++                for (File old : oldFiles) {
++                    try { old.delete(); } catch (Exception ignored) {}
++                }
++            }
++
++            ArrayList<Uri> uris = new ArrayList<>();
++            for (int i = 0; i < array.length(); i++) {
++                String dataUrl = array.getString(i);
++                int comma = dataUrl.indexOf(',');
++                if (comma < 0) continue;
++                byte[] bytes = Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT);
++                String safePrefix = (filenamePrefix == null || filenamePrefix.trim().isEmpty()) ? "unnie" : filenamePrefix.replaceAll("[^A-Za-z0-9._-]", "-");
++                File file = new File(sharedDir, safePrefix + "-" + String.format(Locale.US, "%02d", i + 1) + ".jpg");
++                try (FileOutputStream out = new FileOutputStream(file)) {
++                    out.write(bytes);
++                }
++                Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", file);
++                uris.add(uri);
++            }
++
++            if (uris.isEmpty()) throw new IllegalArgumentException("No shareable images");
++
++            Intent intent;
++            if (uris.size() == 1) {
++                intent = new Intent(Intent.ACTION_SEND);
++                intent.putExtra(Intent.EXTRA_STREAM, uris.get(0));
++            } else {
++                intent = new Intent(Intent.ACTION_SEND_MULTIPLE);
++                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
++            }
++            intent.setType("image/jpeg");
++            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
++            startActivity(Intent.createChooser(intent, "공유"));
++        } catch (Exception e) {
++            Toast.makeText(this, "이미지를 공유하지 못했어요.", Toast.LENGTH_SHORT).show();
++        }
++    }
++
+     private void saveTextFile(String filename, String text) {
+         try {
+             byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+diff -ruN a/app/src/main/res/xml/file_paths.xml b/app/src/main/res/xml/file_paths.xml
+--- a/app/src/main/res/xml/file_paths.xml	1970-01-01 00:00:00.000000000 +0000
++++ b/app/src/main/res/xml/file_paths.xml	2026-08-16 23:27:47.003374560 +0000
+@@ -0,0 +1,4 @@
++<?xml version="1.0" encoding="utf-8"?>
++<paths xmlns:android="http://schemas.android.com/apk/res/android">
++    <cache-path name="shared" path="shared/" />
++</paths>
