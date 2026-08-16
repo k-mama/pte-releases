@@ -30,6 +30,8 @@ jobs:
         working-directory: /tmp/unnie-beta
         run: |
           patch -p1 < "$GITHUB_WORKSPACE/unnie-v03.patch"
+          printf '\nandroid.useAndroidX=true\n' >> gradle.properties
+          grep -q "android.useAndroidX=true" gradle.properties
           grep -q "UNNIE Beta 0.3" app/src/main/assets/index.html
           grep -q ">공유<" app/src/main/assets/index.html
           grep -q "data-act=\"share\"" app/src/main/assets/index.html
