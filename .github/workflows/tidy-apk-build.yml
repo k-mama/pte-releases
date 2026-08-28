@@ -1,0 +1,72 @@
+name: Build TIDY APK Public Temp
+
+on:
+  push:
+    branches:
+      - tidy-apk-build-v0.2-temp
+    paths:
+      - ".github/workflows/tidy-apk-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Restore and verify TIDY source
+        run: |
+          cat tidy-build/chunks/part_* > /tmp/tidy_source.b64
+          base64 -d /tmp/tidy_source.b64 > /tmp/tidy_source.zip
+          echo "0fe8bc8ad674e2f96e337b877909d7b7ff77ba0a78d665c1ad7233e60b18f762  /tmp/tidy_source.zip" | sha256sum -c -
+          mkdir -p /tmp/tidy
+          unzip -q /tmp/tidy_source.zip -d /tmp/tidy
+
+      - name: Run unit tests
+        working-directory: /tmp/tidy/TIDY_Android_V0.2
+        run: gradle --no-daemon testDebugUnitTest
+
+      - name: Build debug APK
+        working-directory: /tmp/tidy/TIDY_Android_V0.2
+        run: gradle --no-daemon assembleDebug
+
+      - name: Prepare APK and checksum
+        run: |
+          cp /tmp/tidy/TIDY_Android_V0.2/app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/TIDY_V0.2_Debug.apk"
+          sha256sum "$GITHUB_WORKSPACE/TIDY_V0.2_Debug.apk" | tee "$GITHUB_WORKSPACE/TIDY_V0.2_Debug.apk.sha256"
+          unzip -t "$GITHUB_WORKSPACE/TIDY_V0.2_Debug.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TIDY_V0.2_Debug_APK
+          path: |
+            TIDY_V0.2_Debug.apk
+            TIDY_V0.2_Debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 7
